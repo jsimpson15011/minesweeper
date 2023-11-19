@@ -40,7 +40,7 @@ function App() {
             return newBoard;
         }
 
-        function createEmptyBoard<T>(defaultValue: T):T[][] {
+        function createEmptyBoard<T>(defaultValue: T): T[][] {
             const newBoard: T[][] = [];
 
             for (let i = 0; i < boardSize; i++) {
@@ -74,11 +74,11 @@ function App() {
         let checkedCount = 0;
         checkedBoard.forEach(x => {
             x.forEach(y => {
-                if(y) checkedCount++;
+                if (y) checkedCount++;
             })
         });
 
-        if (checkedCount + numberOfBombs === boardSize * boardSize){
+        if (checkedCount + numberOfBombs === boardSize * boardSize) {
             setGameState("victory");
         }
 
@@ -89,20 +89,20 @@ function App() {
             || y < 0
             || x > bombBoard.length - 1
             || y > bombBoard[0].length - 1
-            ||bombBoard[x][y]
+            || bombBoard[x][y]
             || flagBoard[x][y]
             || checkedBoard[x][y]
         ) return;
 
         let bombCount = 0;
-        if(bombBoard[x-1]?.[y]) bombCount++;
-        if(bombBoard[x-1]?.[y-1]) bombCount++;
-        if(bombBoard[x-1]?.[y+1]) bombCount++;
-        if(bombBoard[x]?.[y-1]) bombCount++;
-        if(bombBoard[x]?.[y+1]) bombCount++;
-        if (bombBoard[x+1]?.[y]) bombCount++;
-        if(bombBoard[x+1]?.[y-1]) bombCount++;
-        if(bombBoard[x+1]?.[y+1]) bombCount++;
+        if (bombBoard[x - 1]?.[y]) bombCount++;
+        if (bombBoard[x - 1]?.[y - 1]) bombCount++;
+        if (bombBoard[x - 1]?.[y + 1]) bombCount++;
+        if (bombBoard[x]?.[y - 1]) bombCount++;
+        if (bombBoard[x]?.[y + 1]) bombCount++;
+        if (bombBoard[x + 1]?.[y]) bombCount++;
+        if (bombBoard[x + 1]?.[y - 1]) bombCount++;
+        if (bombBoard[x + 1]?.[y + 1]) bombCount++;
 
         const updatedCheckedBoard = [...checkedBoard];
         const updatedCountBoard = [...bombCountBoard];
@@ -149,12 +149,45 @@ function App() {
     const handleAuxClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number) => {
         e.preventDefault();
 
-        if (checkedBoard[x][y]) return;
-
         switch (e.button) {
-            case 1:
+            case 1: {
+                let adjacentFlagCount = 0;
+                if (flagBoard?.[x + 1]?.[y]) adjacentFlagCount++;
+                if (flagBoard?.[x + 1]?.[y + 1]) adjacentFlagCount++;
+                if (flagBoard?.[x + 1]?.[y - 1]) adjacentFlagCount++;
+                if (flagBoard?.[x - 1]?.[y]) adjacentFlagCount++;
+                if (flagBoard?.[x - 1]?.[y + 1]) adjacentFlagCount++;
+                if (flagBoard?.[x - 1]?.[y - 1]) adjacentFlagCount++;
+                if (flagBoard?.[x]?.[y + 1]) adjacentFlagCount++;
+                if (flagBoard?.[x]?.[y - 1]) adjacentFlagCount++;
+
+                if (adjacentFlagCount === bombCountBoard[x][y]){
+                    floodFill(x,y);
+                    floodFill(x + 1, y);
+                    floodFill(x + 1, y + 1);
+                    floodFill(x + 1, y - 1);
+                    floodFill(x - 1, y);
+                    floodFill(x - 1, y + 1);
+                    floodFill(x -1, y - 1);
+                    floodFill(x, y + 1);
+                    floodFill(x, y - 1);
+
+                    if (bombBoard?.[x]?.[y] && !flagBoard?.[x]?.[y]) setGameState("defeat");
+                    if (bombBoard?.[x]?.[y + 1] && !flagBoard?.[x]?.[y + 1]) setGameState("defeat");
+                    if (bombBoard?.[x]?.[y - 1] && !flagBoard?.[x]?.[y - 1]) setGameState("defeat");
+                    if (bombBoard?.[x + 1]?.[y] && !flagBoard?.[x + 1]?.[y]) setGameState("defeat");
+                    if (bombBoard?.[x + 1]?.[y + 1] && !flagBoard?.[x + 1]?.[y + 1]) setGameState("defeat");
+                    if (bombBoard?.[x + 1]?.[y - 1] && !flagBoard?.[x + 1]?.[y - 1]) setGameState("defeat");
+                    if (bombBoard?.[x - 1]?.[y] && !flagBoard?.[x - 1]?.[y]) setGameState("defeat");
+                    if (bombBoard?.[x - 1]?.[y + 1] && !flagBoard?.[x - 1]?.[y + 1]) setGameState("defeat");
+                    if (bombBoard?.[x - 1]?.[y - 1] && !flagBoard?.[x - 1]?.[y - 1]) setGameState("defeat");
+
+                }
                 break;
+            }
             case 2: {
+                if (checkedBoard[x][y]) return;
+
                 const updatedFlagBoard = [...flagBoard];
 
                 updatedFlagBoard[x][y] = !updatedFlagBoard[x][y];
@@ -198,9 +231,19 @@ function App() {
 
     switch (gameState) {
         case "defeat":
-            return <div>LOSER</div>;
+            return <div>
+                LOSER
+                {
+                    boardElements
+                }
+            </div>;
         case "victory":
-            return <div>WINNER</div>;
+            return <div>
+                WINNER
+                {
+                    boardElements
+                }
+            </div>;
         case "play":
             return <>
                 {
