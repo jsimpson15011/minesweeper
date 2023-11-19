@@ -6,6 +6,7 @@ import Square from "./components/Square.tsx";
 function App() {
     const [boardSize, setBoardSize] = useState(10);
     const [numberOfBombs, setNumberOfBombs] = useState(13);
+    const [numberOfFlags, setNumberOfFlags] = useState(0);
     const [bombBoard, setBombBoard] = useState<boolean[][]>([]);
     const [flagBoard, setFlagBoard] = useState<boolean[][]>([]);
     const [checkedBoard, setCheckedBoard] = useState<boolean[][]>([]);
@@ -58,6 +59,30 @@ function App() {
         setBombCountBoard(createEmptyBoard<number>(0))
 
     }, [boardSize, numberOfBombs]);
+
+    useEffect(() => {
+        let count = 0;
+        flagBoard.forEach(x => {
+            x.forEach(y => {
+                if (y) count++;
+            })
+        });
+        setNumberOfFlags(count);
+    }, [flagBoard]);
+
+    useEffect(() => {
+        let checkedCount = 0;
+        checkedBoard.forEach(x => {
+            x.forEach(y => {
+                if(y) checkedCount++;
+            })
+        });
+
+        if (checkedCount + numberOfBombs === boardSize * boardSize){
+            setGameState("victory");
+        }
+
+    }, [boardSize, checkedBoard, numberOfBombs]);
 
     function floodFill(x: number, y: number): void {
         if (x < 0
@@ -145,26 +170,31 @@ function App() {
     }
 
 
-    const boardElements = bombBoard.map((isBombRow, y) => {
-        return <SquareRow key={y}>
-            {
-                isBombRow.map((_, x) => {
-                    return <Square
-                        x={x}
-                        y={y}
-                        isBomb={bombBoard[x][y]}
-                        bombCount={bombCountBoard[x][y]}
-                        handleRightClick={handleRightClick}
-                        handleAuxClick={(e) => handleAuxClick(e, x, y)}
-                        isChecked={checkedBoard[x][y]}
-                        isFlag={flagBoard[x][y]}
-                        handleClick={(e) => handleLeftClick(e, x, y)}
-                        key={x + "-" + y}
-                    />
-                })
-            }
-        </SquareRow>
-    });
+    const boardElements = <div>
+        <div>{numberOfBombs - numberOfFlags}</div>
+        {
+            bombBoard.map((isBombRow, y) => {
+                return <SquareRow key={y}>
+                    {
+                        isBombRow.map((_, x) => {
+                            return <Square
+                                x={x}
+                                y={y}
+                                isBomb={bombBoard[x][y]}
+                                bombCount={bombCountBoard[x][y]}
+                                handleRightClick={handleRightClick}
+                                handleAuxClick={(e) => handleAuxClick(e, x, y)}
+                                isChecked={checkedBoard[x][y]}
+                                isFlag={flagBoard[x][y]}
+                                handleClick={(e) => handleLeftClick(e, x, y)}
+                                key={x + "-" + y}
+                            />
+                        })
+                    }
+                </SquareRow>
+            })
+        }
+    </div>
 
     switch (gameState) {
         case "defeat":
