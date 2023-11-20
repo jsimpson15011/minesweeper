@@ -151,6 +151,8 @@ function App() {
 
         switch (e.button) {
             case 1: {
+                if (bombCountBoard[x][y] === 0) return;
+
                 let adjacentFlagCount = 0;
                 if (flagBoard?.[x + 1]?.[y]) adjacentFlagCount++;
                 if (flagBoard?.[x + 1]?.[y + 1]) adjacentFlagCount++;
