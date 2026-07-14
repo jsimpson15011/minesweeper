@@ -1,9 +1,15 @@
-import {ReactNode} from "react";
+import { ReactNode } from 'react';
 
-const SquareRow = ({children}:{children: ReactNode}) => {
-    return(<div style={{display:"flex"}}>
-        {children}
-    </div>)
+type Props = {
+  children: ReactNode;
+};
+
+function SquareRow({ children }: Props) {
+  return (
+    <div className="square-row" role="row">
+      {children}
+    </div>
+  );
 }
 
 export default SquareRow;

@@ -1,264 +1,221 @@
-import './App.css'
-import React, {useEffect, useState} from "react";
-import SquareRow from "./components/SquareRow.tsx";
-import Square from "./components/Square.tsx";
+import './App.css';
+import {
+  Cell,
+  GameSettings,
+  GameStatus,
+  Position,
+  chordCell,
+  countFlags,
+  createBoard,
+  revealCell,
+  toggleFlag,
+  validateGameSettings,
+} from './game/minesweeper';
+import Square from './components/Square';
+import SquareRow from './components/SquareRow';
+import { useReducer, useState } from 'react';
 
-function App() {
-    const [boardSize, setBoardSize] = useState(10);
-    const [numberOfBombs, setNumberOfBombs] = useState(13);
-    const [numberOfFlags, setNumberOfFlags] = useState(0);
-    const [bombBoard, setBombBoard] = useState<boolean[][]>([]);
-    const [flagBoard, setFlagBoard] = useState<boolean[][]>([]);
-    const [checkedBoard, setCheckedBoard] = useState<boolean[][]>([]);
-    const [bombCountBoard, setBombCountBoard] = useState<number[][]>([]);
-    const [gameState, setGameState] = useState<"play" | "victory" | "defeat">("play");
+type GameState = {
+  board: Cell[][];
+  settings: GameSettings;
+  status: GameStatus;
+};
 
-    useEffect(() => {
-        function createBombLocations() {
-            const numberOfSquares = boardSize * boardSize;
-            const bombSquares = new Set<number>();
+type GameAction =
+  | { type: 'reveal'; position: Position }
+  | { type: 'toggleFlag'; position: Position }
+  | { type: 'chord'; position: Position }
+  | { type: 'newGame'; settings: GameSettings };
 
-            while (bombSquares.size < numberOfBombs) {
-                bombSquares.add(Math.floor(Math.random() * numberOfSquares));
-            }
+const DEFAULT_SETTINGS: GameSettings = {
+  rows: 10,
+  columns: 10,
+  bombs: 13,
+};
 
-            return bombSquares;
-        }
-
-        function createBombBoard() {
-            const newBoard: boolean[][] = [];
-            const bombLocations = createBombLocations();
-            let squareIndex = 0;
-
-            for (let i = 0; i < boardSize; i++) {
-                newBoard[i] = [];
-                for (let j = 0; j < boardSize; j++) {
-                    newBoard[i][j] = bombLocations.has(squareIndex);
-                    squareIndex++;
-                }
-            }
-            return newBoard;
-        }
-
-        function createEmptyBoard<T>(defaultValue: T): T[][] {
-            const newBoard: T[][] = [];
-
-            for (let i = 0; i < boardSize; i++) {
-                newBoard[i] = [];
-                for (let j = 0; j < boardSize; j++) {
-                    newBoard[i][j] = defaultValue;
-                }
-            }
-
-            return newBoard;
-        }
-
-        setFlagBoard(createEmptyBoard<boolean>(false));
-        setCheckedBoard(createEmptyBoard<boolean>(false));
-        setBombBoard(createBombBoard());
-        setBombCountBoard(createEmptyBoard<number>(0))
-
-    }, [boardSize, numberOfBombs]);
-
-    useEffect(() => {
-        let count = 0;
-        flagBoard.forEach(x => {
-            x.forEach(y => {
-                if (y) count++;
-            })
-        });
-        setNumberOfFlags(count);
-    }, [flagBoard]);
-
-    useEffect(() => {
-        let checkedCount = 0;
-        checkedBoard.forEach(x => {
-            x.forEach(y => {
-                if (y) checkedCount++;
-            })
-        });
-
-        if (checkedCount + numberOfBombs === boardSize * boardSize) {
-            setGameState("victory");
-        }
-
-    }, [boardSize, checkedBoard, numberOfBombs]);
-
-    function floodFill(x: number, y: number): void {
-        if (x < 0
-            || y < 0
-            || x > bombBoard.length - 1
-            || y > bombBoard[0].length - 1
-            || bombBoard[x][y]
-            || flagBoard[x][y]
-            || checkedBoard[x][y]
-        ) return;
-
-        let bombCount = 0;
-        if (bombBoard[x - 1]?.[y]) bombCount++;
-        if (bombBoard[x - 1]?.[y - 1]) bombCount++;
-        if (bombBoard[x - 1]?.[y + 1]) bombCount++;
-        if (bombBoard[x]?.[y - 1]) bombCount++;
-        if (bombBoard[x]?.[y + 1]) bombCount++;
-        if (bombBoard[x + 1]?.[y]) bombCount++;
-        if (bombBoard[x + 1]?.[y - 1]) bombCount++;
-        if (bombBoard[x + 1]?.[y + 1]) bombCount++;
-
-        const updatedCheckedBoard = [...checkedBoard];
-        const updatedCountBoard = [...bombCountBoard];
-
-        updatedCheckedBoard[x][y] = true;
-        updatedCountBoard[x][y] = bombCount;
-
-
-        setBombCountBoard(updatedCountBoard);
-        setCheckedBoard(updatedCheckedBoard);
-
-        if (bombCount > 0) return;
-
-        floodFill(x - 1, y);
-        floodFill(x - 1, y - 1);
-        floodFill(x - 1, y + 1);
-        floodFill(x + 1, y);
-        floodFill(x + 1, y - 1);
-        floodFill(x + 1, y + 1);
-        floodFill(x, y - 1);
-        floodFill(x, y + 1);
-    }
-
-    const handleLeftClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number) => {
-        e.preventDefault();
-
-        if (bombBoard[x][y]) {
-            setGameState("defeat");
-        } else {
-            const updatedFlagBoard = [...flagBoard];
-
-            updatedFlagBoard[x][y] = false;
-
-            floodFill(x, y);
-
-            setFlagBoard(updatedFlagBoard);
-        }
-    }
-
-    const handleRightClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-        e.preventDefault();
-    }
-
-    const handleAuxClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number) => {
-        e.preventDefault();
-
-        switch (e.button) {
-            case 1: {
-                if (bombCountBoard[x][y] === 0) return;
-
-                let adjacentFlagCount = 0;
-                if (flagBoard?.[x + 1]?.[y]) adjacentFlagCount++;
-                if (flagBoard?.[x + 1]?.[y + 1]) adjacentFlagCount++;
-                if (flagBoard?.[x + 1]?.[y - 1]) adjacentFlagCount++;
-                if (flagBoard?.[x - 1]?.[y]) adjacentFlagCount++;
-                if (flagBoard?.[x - 1]?.[y + 1]) adjacentFlagCount++;
-                if (flagBoard?.[x - 1]?.[y - 1]) adjacentFlagCount++;
-                if (flagBoard?.[x]?.[y + 1]) adjacentFlagCount++;
-                if (flagBoard?.[x]?.[y - 1]) adjacentFlagCount++;
-
-                if (adjacentFlagCount === bombCountBoard[x][y]){
-                    floodFill(x,y);
-                    floodFill(x + 1, y);
-                    floodFill(x + 1, y + 1);
-                    floodFill(x + 1, y - 1);
-                    floodFill(x - 1, y);
-                    floodFill(x - 1, y + 1);
-                    floodFill(x -1, y - 1);
-                    floodFill(x, y + 1);
-                    floodFill(x, y - 1);
-
-                    if (bombBoard?.[x]?.[y] && !flagBoard?.[x]?.[y]) setGameState("defeat");
-                    if (bombBoard?.[x]?.[y + 1] && !flagBoard?.[x]?.[y + 1]) setGameState("defeat");
-                    if (bombBoard?.[x]?.[y - 1] && !flagBoard?.[x]?.[y - 1]) setGameState("defeat");
-                    if (bombBoard?.[x + 1]?.[y] && !flagBoard?.[x + 1]?.[y]) setGameState("defeat");
-                    if (bombBoard?.[x + 1]?.[y + 1] && !flagBoard?.[x + 1]?.[y + 1]) setGameState("defeat");
-                    if (bombBoard?.[x + 1]?.[y - 1] && !flagBoard?.[x + 1]?.[y - 1]) setGameState("defeat");
-                    if (bombBoard?.[x - 1]?.[y] && !flagBoard?.[x - 1]?.[y]) setGameState("defeat");
-                    if (bombBoard?.[x - 1]?.[y + 1] && !flagBoard?.[x - 1]?.[y + 1]) setGameState("defeat");
-                    if (bombBoard?.[x - 1]?.[y - 1] && !flagBoard?.[x - 1]?.[y - 1]) setGameState("defeat");
-
-                }
-                break;
-            }
-            case 2: {
-                if (checkedBoard[x][y]) return;
-
-                const updatedFlagBoard = [...flagBoard];
-
-                updatedFlagBoard[x][y] = !updatedFlagBoard[x][y];
-
-                setFlagBoard(updatedFlagBoard);
-
-                break;
-            }
-            default:
-                return;
-        }
-
-    }
-
-
-    const boardElements = <div>
-        <div>{numberOfBombs - numberOfFlags}</div>
-        {
-            bombBoard.map((isBombRow, y) => {
-                return <SquareRow key={y}>
-                    {
-                        isBombRow.map((_, x) => {
-                            return <Square
-                                x={x}
-                                y={y}
-                                isBomb={bombBoard[x][y]}
-                                bombCount={bombCountBoard[x][y]}
-                                handleRightClick={handleRightClick}
-                                handleAuxClick={(e) => handleAuxClick(e, x, y)}
-                                isChecked={checkedBoard[x][y]}
-                                isFlag={flagBoard[x][y]}
-                                handleClick={(e) => handleLeftClick(e, x, y)}
-                                key={x + "-" + y}
-                            />
-                        })
-                    }
-                </SquareRow>
-            })
-        }
-    </div>
-
-    switch (gameState) {
-        case "defeat":
-            return <div>
-                LOSER
-                {
-                    boardElements
-                }
-            </div>;
-        case "victory":
-            return <div>
-                WINNER
-                {
-                    boardElements
-                }
-            </div>;
-        case "play":
-            return <>
-                {
-                    boardElements
-                }
-                <label htmlFor={"boardSize"}>Board Size: </label>
-                <input name={"boardSize"} type={"number"} value={boardSize}
-                       onChange={event => setBoardSize(parseInt(event.target.value))}/>
-                <label htmlFor={"bombCount"}>Number of Bombs</label>
-                <input name={"bombCount"} type={"number"} value={numberOfBombs}
-                       onChange={event => setNumberOfBombs(parseInt(event.target.value))}/>
-            </>
-    }
+function createInitialState(settings: GameSettings = DEFAULT_SETTINGS): GameState {
+  return {
+    board: createBoard(settings),
+    settings,
+    status: 'playing',
+  };
 }
 
-export default App
+function gameReducer(state: GameState, action: GameAction): GameState {
+  if (state.status === 'won' || state.status === 'lost') {
+    if (action.type !== 'newGame') {
+      return state;
+    }
+  }
+
+  switch (action.type) {
+    case 'reveal': {
+      const result = revealCell(state.board, action.position);
+      return {
+        ...state,
+        board: result.board,
+        status: result.status,
+      };
+    }
+    case 'toggleFlag':
+      return {
+        ...state,
+        board: toggleFlag(state.board, action.position),
+      };
+    case 'chord': {
+      const result = chordCell(state.board, action.position);
+      return {
+        ...state,
+        board: result.board,
+        status: result.status,
+      };
+    }
+    case 'newGame':
+      return createInitialState(action.settings);
+  }
+}
+
+function parseInputValue(value: string): number {
+  if (value.trim() === '') {
+    return Number.NaN;
+  }
+
+  return Number(value);
+}
+
+function App() {
+  const [gameState, dispatch] = useReducer(gameReducer, undefined, () => createInitialState());
+  const [draftSettings, setDraftSettings] = useState({
+    rows: String(DEFAULT_SETTINGS.rows),
+    columns: String(DEFAULT_SETTINGS.columns),
+    bombs: String(DEFAULT_SETTINGS.bombs),
+  });
+
+  const parsedSettings: GameSettings = {
+    rows: parseInputValue(draftSettings.rows),
+    columns: parseInputValue(draftSettings.columns),
+    bombs: parseInputValue(draftSettings.bombs),
+  };
+  const validation = validateGameSettings(parsedSettings);
+  const flagsUsed = countFlags(gameState.board);
+  const flagsRemaining = gameState.settings.bombs - flagsUsed;
+  const statusText =
+    gameState.status === 'won'
+      ? 'Victory. Every safe cell has been revealed.'
+      : gameState.status === 'lost'
+        ? 'Defeat. A bomb was revealed.'
+        : 'Game in progress.';
+
+  function updateDraftSetting(field: keyof GameSettings, value: string) {
+    setDraftSettings((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function startNewGame() {
+    if (!validation.isValid) {
+      return;
+    }
+
+    dispatch({ type: 'newGame', settings: parsedSettings });
+  }
+
+  return (
+    <main className={`app game-${gameState.status}`}>
+      <section className="game-shell" aria-labelledby="game-title">
+        <header className="game-header">
+          <div>
+            <h1 id="game-title">Minesweeper</h1>
+            <p className="game-status" role="status" aria-live="polite">
+              {statusText}
+            </p>
+          </div>
+          <div className="scoreboard" aria-label="Game counters">
+            <span aria-label={`Bombs: ${gameState.settings.bombs}`}>
+              Bombs <strong>{gameState.settings.bombs}</strong>
+            </span>
+            <span aria-label={`Flags used: ${flagsUsed}`}>
+              Flags <strong>{flagsUsed}</strong>
+            </span>
+            <span aria-label={`Flags remaining: ${flagsRemaining}`}>
+              Left <strong>{flagsRemaining}</strong>
+            </span>
+          </div>
+        </header>
+
+        <form className="controls" onSubmit={(event) => event.preventDefault()}>
+          <label>
+            Rows
+            <input
+              type="number"
+              min="2"
+              max="30"
+              step="1"
+              value={draftSettings.rows}
+              onChange={(event) => updateDraftSetting('rows', event.target.value)}
+            />
+          </label>
+          <label>
+            Columns
+            <input
+              type="number"
+              min="2"
+              max="30"
+              step="1"
+              value={draftSettings.columns}
+              onChange={(event) => updateDraftSetting('columns', event.target.value)}
+            />
+          </label>
+          <label>
+            Bombs
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={draftSettings.bombs}
+              onChange={(event) => updateDraftSetting('bombs', event.target.value)}
+            />
+          </label>
+          <button type="button" className="new-game-button" onClick={startNewGame}>
+            New Game
+          </button>
+        </form>
+
+        {!validation.isValid && (
+          <p className="validation-message" role="alert">
+            {validation.errors[0]}
+          </p>
+        )}
+
+        <div
+          className="board"
+          role="grid"
+          aria-label="Minesweeper board"
+        >
+          {gameState.board.map((row, rowIndex) => (
+            <SquareRow key={rowIndex}>
+              {row.map((cell, columnIndex) => {
+                const position = { row: rowIndex, column: columnIndex };
+
+                return (
+                  <Square
+                    key={`${rowIndex}-${columnIndex}`}
+                    cell={cell}
+                    position={position}
+                    isGameOver={gameState.status === 'won' || gameState.status === 'lost'}
+                    onReveal={() => dispatch({ type: 'reveal', position })}
+                    onToggleFlag={() => dispatch({ type: 'toggleFlag', position })}
+                    onChord={() => dispatch({ type: 'chord', position })}
+                  />
+                );
+              })}
+            </SquareRow>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default App;

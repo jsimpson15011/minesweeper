@@ -1,23 +1,78 @@
-.square{
-    width: 50px;
-    height: 50px;
-    background: #b6b6b6;
-    border: #d3d3d3 solid 5px;
-    border-left: #3f3e3e solid 5px;
-    border-bottom: #1c1c1c solid 5px;
-    padding: 0;
+.square {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--cell-size);
+  border: 1px solid #172022;
+  border-top-color: #e8ece5;
+  border-left-color: #e8ece5;
+  background: #8f9b94;
+  color: #172022;
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: clamp(0.92rem, 3vw, 1.25rem);
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
 }
 
-.square:hover{
-    background: #b8ffff;
+.square:hover:not(:disabled) {
+  background: #9fada5;
 }
 
-.square_active{
-    background: #49ffff;
+.square:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid #f0c351;
+  outline-offset: -3px;
 }
 
-.square_checked{
-    background: #e0e0e0;
-    opacity: .5;
-    border: transparent solid 5px;
+.square:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.square[data-revealed='true'] {
+  border-color: #76817b;
+  background: #d7ddd6;
+}
+
+.square[data-flagged='true'] {
+  background: #f0c351;
+  color: #172022;
+}
+
+.square[data-bomb='true'] {
+  background: #b54638;
+  color: #ffffff;
+}
+
+.square[data-count='1'] {
+  color: #1d5f9f;
+}
+
+.square[data-count='2'] {
+  color: #1f6b3a;
+}
+
+.square[data-count='3'] {
+  color: #b54638;
+}
+
+.square[data-count='4'] {
+  color: #5547a5;
+}
+
+.square[data-count='5'] {
+  color: #8a4a1d;
+}
+
+.square[data-count='6'] {
+  color: #16717c;
+}
+
+.square[data-count='7'],
+.square[data-count='8'] {
+  color: #172022;
 }
