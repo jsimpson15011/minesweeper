@@ -3,13 +3,9 @@
 }
 
 .app {
-  min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px;
-  background:
-    linear-gradient(135deg, rgba(24, 73, 87, 0.08), rgba(181, 70, 56, 0.08)),
-    #f3f5f1;
   color: #172022;
 }
 
